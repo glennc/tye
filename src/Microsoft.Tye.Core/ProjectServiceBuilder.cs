@@ -28,6 +28,8 @@ namespace Microsoft.Tye
 
         public List<EnvironmentVariableBuilder> EnvironmentVariables { get; } = new List<EnvironmentVariableBuilder>();
 
+        public List<Secret> Secrets { get; } = new List<Secret>();
+
         // Used when running in a container locally.
         public List<VolumeBuilder> Volumes { get; } = new List<VolumeBuilder>();
 

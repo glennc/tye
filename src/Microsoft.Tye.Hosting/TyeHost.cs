@@ -8,16 +8,27 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.DotNet.Interactive;
+using Microsoft.DotNet.Interactive.Commands;
+using Microsoft.DotNet.Interactive.CSharp;
+using Microsoft.DotNet.Interactive.Server;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Tye.Hosting.Diagnostics;
 using Microsoft.Tye.Hosting.Model;
+using Org.BouncyCastle.Security;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
@@ -51,6 +62,22 @@ namespace Microsoft.Tye.Hosting
         // An additional sink that output will be piped to. Useful for testing.
         public ILogEventSink? Sink { get; set; }
 
+        private static readonly Assembly[] _references = new[]
+        {
+            typeof(Host).Assembly, // Microsoft.Extensions.Hosting
+            typeof(WebHost).Assembly, // Microsoft.AspNetCore
+            typeof(TyeHost).Assembly
+        };
+
+        private static readonly string[] _namespaces = new[]
+        {
+            typeof(HttpContext).Namespace, // Microsoft.AspNetCore.Http
+            typeof(IEndpointRouteBuilder).Namespace, // Microsoft.AspNetCore.Routing
+            typeof(EndpointRouteBuilderExtensions).Namespace, // Microsoft.AspNetCore.Builder
+            typeof(HttpClient).Namespace, // System.Net.Htttp
+            typeof(Application).Namespace
+        };
+
         public async Task RunAsync()
         {
             try
@@ -83,10 +110,15 @@ namespace Microsoft.Tye.Hosting
 
             ConfigureApplication(app);
 
+
             _replicaRegistry = new ReplicaRegistry(_application.ContextDirectory, _logger);
 
             _processor = CreateApplicationProcessor(_replicaRegistry, _options, _logger);
 
+            var kernel = ConfigureKernel(_application);
+
+            var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+            lifetime.ApplicationStopped.Register(() => kernel.Dispose());
             await app.StartAsync();
 
             _logger.LogInformation("Dashboard running on {Address}", app.Addresses.First());
@@ -107,6 +139,34 @@ namespace Microsoft.Tye.Hosting
             }
 
             return app;
+        }
+
+        private CompositeKernel ConfigureKernel(Application app)
+        {
+            var kernel = new CompositeKernel();
+            kernel.UseLog();
+
+            var csharpKernel = new CSharpKernel()
+                                .UseDefaultFormatting()
+                                .UseNugetDirective()
+                                .UseKernelHelpers()
+                                .UseWho()
+                                .UseDotNetVariableSharing();
+
+            _ = Task.Run(async () =>
+            {
+                var rDirectives = string.Join(Environment.NewLine, _references.Select(a => $"#r \"{a.Location}\""));
+                var usings = string.Join(Environment.NewLine, _namespaces.Select(ns => $"using {ns};"));
+
+                await kernel.SendAsync(new SubmitCode($"{rDirectives}{Environment.NewLine}{usings}"), CancellationToken.None).ConfigureAwait(false);
+
+                await csharpKernel.SetVariableAsync("App", app);
+
+                kernel.UseNamedPipeKernelServer("InteractiveTye", new System.IO.DirectoryInfo("."));
+            });
+
+            kernel.Add(csharpKernel);
+            return kernel;
         }
 
         private static WebApplication BuildWebApplication(Application application, HostOptions options, ILogEventSink? sink)

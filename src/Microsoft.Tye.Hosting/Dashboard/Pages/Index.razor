@@ -13,6 +13,7 @@
             <th>Replicas</th>
             <th>Restarts</th>
             <th>Logs</th>
+            <th>Control</th>
         </tr>
     </thead>
     <tbody>
@@ -22,7 +23,7 @@
             var servicePath = $"services/{service.Description.Name}";
             <tr @key="service.Description.Name">
                 <td>
-                    @if(service.ServiceType == ServiceType.External)
+                    @if (service.ServiceType == ServiceType.External)
                     {
                         <span>@service.Description.Name</span>
                     }
@@ -72,15 +73,21 @@
                         <p>none</p>
                     }
                 </td>
-                @if(service.ServiceType == ServiceType.External)
+                @if (service.ServiceType == ServiceType.External)
                 {
-                    <td colspan=3></td>
+                    <td colspan=4></td>
                 }
                 else
                 {
                     <td>@service.Replicas.Count/@service.Description.Replicas</td>
                     <td>@service.Restarts</td>
                     <td><NavLink href="@logsPath">View</NavLink></td>
+                    <td>
+                        @if(service.ServiceType != ServiceType.Ingress)
+                        {
+                            <button class="btn btn-primary" @onclick="async () => await RestartService(service)">Kill All</button>
+                        }
+                    </td>
                 }
             </tr>
         }
@@ -107,6 +114,22 @@
     private void OnReplicaChanged(ReplicaEvent replicaEvent)
     {
         InvokeAsync(() => StateHasChanged());
+    }
+
+    private async Task RestartService(Service service)
+    {
+        foreach (var replica in service.Replicas.Values)
+        {
+            switch (replica)
+            {
+                case ProcessStatus p:
+                    p.Kill();
+                    break;
+                case DockerStatus p:
+                    await p.Restart();
+                    break;
+            }
+        }
     }
 
     void IDisposable.Dispose()

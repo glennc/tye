@@ -24,31 +24,31 @@ namespace Microsoft.Tye
                 new Option("--no-build")
                 {
                     Description = "Do not build project files before running.",
-                    Required = false
+                    IsRequired = false
                 },
                 new Option("--port")
                 {
                     Description = "The port to run control plane on.",
                     Argument = new Argument<int?>("port"),
-                    Required = false
+                    IsRequired = false
                 },
                 new Option("--logs")
                 {
                     Description = "Write structured application logs to the specified log provider. Supported providers are 'console', 'elastic' (Elasticsearch), 'ai' (ApplicationInsights), 'seq'.",
                     Argument = new Argument<string>("logs"),
-                    Required = false
+                    IsRequired = false
                 },
                 new Option("--dtrace")
                 {
                     Description = "Write distributed traces to the specified tracing provider. Supported providers are 'zipkin'.",
                     Argument = new Argument<string>("trace"),
-                    Required = false,
+                    IsRequired = false,
                 },
                 new Option("--metrics")
                 {
                     Description = "Write metrics to the specified metrics provider.",
                     Argument = new Argument<string>("metrics"),
-                    Required = false
+                    IsRequired = false
                 },
                 new Option("--debug")
                 {
@@ -57,22 +57,22 @@ namespace Microsoft.Tye
                         Arity = ArgumentArity.ZeroOrMore,
                     },
                     Description = "Wait for debugger attach to specific service. Specify \"*\" to wait for all services.",
-                    Required = false
+                    IsRequired = false
                 },
                 new Option("--docker")
                 {
                     Description = "Run projects as docker containers.",
-                    Required = false
+                    IsRequired = false
                 },
                 new Option("--dashboard")
                 {
                     Description = "Launch dashboard on run.",
-                    Required = false
+                    IsRequired = false
                 },
                 new Option("--watch")
                 {
                     Description = "Watches for code changes for all dotnet projects.",
-                    Required = false
+                    IsRequired = false
                 },
                 StandardOptions.Framework,
                 StandardOptions.Tags,

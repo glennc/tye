@@ -100,7 +100,7 @@ namespace Microsoft.Tye
 
             context.Console.ResetTerminalForegroundColor();
 
-            context.ResultCode = 1;
+            context.ExitCode = 1;
         }
     }
 }

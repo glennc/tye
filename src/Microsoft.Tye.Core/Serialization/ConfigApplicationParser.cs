@@ -41,6 +41,10 @@ namespace Tye.Serialization
                         YamlParser.ThrowIfNotYamlSequence(key, child.Value);
                         ConfigExtensionsParser.HandleExtensionsMapping((child.Value as YamlSequenceNode)!, app.Extensions);
                         break;
+                    case "secrets":
+                        YamlParser.ThrowIfNotYamlSequence(key, child.Value);
+                        ConfigSecretParser.HandleSecrets((child.Value as YamlSequenceNode)!, app.Secrets);
+                        break;
                     default:
                         throw new TyeYamlException(child.Key.Start, CoreStrings.FormatUnrecognizedKey(key));
                 }

@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Microsoft.Tye.ConfigModel;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
@@ -58,6 +59,7 @@ namespace Tye.Serialization
 
             app.Name ??= NameInferer.InferApplicationName(_fileInfo!);
 
+
             // TODO confirm if these are ever null.
             foreach (var service in app.Services)
             {
@@ -65,7 +67,14 @@ namespace Tye.Serialization
                 service.Configuration ??= new List<ConfigConfigurationSource>();
                 service.Volumes ??= new List<ConfigVolume>();
                 service.Tags ??= new List<string>();
+
+                foreach(var config in service.Configuration)
+                {
+                    config.Value = ReplaceValues(config.Value, service);
+                }
             }
+
+
 
             foreach (var ingress in app.Ingress)
             {
@@ -75,6 +84,76 @@ namespace Tye.Serialization
             }
 
             return app;
+        }
+
+
+
+        public static string ReplaceValues(string value, ConfigService service)
+        {
+            var tokens = GetTokens(value);
+            string newValue = value;
+            foreach (var token in tokens)
+            {
+                var replacement = ResolveToken(token, service);
+                if (replacement is null)
+                {
+                    throw new InvalidOperationException($"No available substitutions found for token '{token}'.");
+                }
+
+                newValue = value.Replace(token, replacement);
+            }
+            return newValue;
+        }
+
+        private static string ResolveToken(string token, ConfigService service)
+        {
+            var keys = token[2..^1].Split(':');
+            if (keys.Length == 2 && keys[0] == "rand")
+            {
+                return Guid.NewGuid().ToString();
+            }
+            else if (keys.Length == 2 && keys[0] == "secret")
+            {
+                var secret = service.Configuration.FirstOrDefault(x => x.Name == keys[1]);
+                if(secret is null)
+                {
+                    throw new Exception($"Unable to find secret {keys[1]}");
+                }
+
+                return secret.Value;
+            }
+
+            throw new Exception($"unknown token {token}");
+        }
+
+        private static HashSet<string> GetTokens(string text)
+        {
+            var tokens = new HashSet<string>(StringComparer.Ordinal);
+
+            var i = 0;
+            while ((i = text.IndexOf("${", i)) != -1)
+            {
+                var start = i;
+                var end = (int?)null;
+                for (; i < text.Length; i++)
+                {
+                    if (text[i] == '}')
+                    {
+                        end = i;
+                        break;
+                    }
+                }
+
+                if (end is null)
+                {
+                    throw new FormatException($"Value '{text}' contains an unclosed replacement token '{text[start..text.Length]}'.");
+                }
+
+                var token = text[start..(end.Value + 1)];
+                tokens.Add(token);
+            }
+
+            return tokens;
         }
 
         public static string GetScalarValue(YamlNode node)

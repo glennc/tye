@@ -36,6 +36,8 @@ namespace Microsoft.Tye.ConfigModel
 
         public List<ConfigIngress> Ingress { get; set; } = new List<ConfigIngress>();
 
+        public List<ConfigSecret> Secrets { get; set; } = new List<ConfigSecret>();
+
         public void Validate()
         {
             var config = this;

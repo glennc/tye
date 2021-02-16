@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Threading.Tasks;
+
 namespace Microsoft.Tye.Hosting.Model
 {
     public class DockerStatus : ReplicaStatus
@@ -17,5 +19,20 @@ namespace Microsoft.Tye.Hosting.Model
         public string? DockerNetworkAlias { get; set; }
 
         public string? ContainerId { get; set; }
+
+        public async Task Restart()
+        {
+            var result = await ProcessUtil.RunAsync(
+                "docker",
+                $"restart {ContainerId}",
+                throwOnError: false,
+                outputDataReceived: data => Service.Logs.OnNext($"[{ContainerId}]: {data}"),
+                errorDataReceived: data => Service.Logs.OnNext($"[{ContainerId}]: {data}"));
+            
+            if(result.ExitCode == 0)
+            {
+                Service.Restarts += 1;
+            }
+        }
     }
 }

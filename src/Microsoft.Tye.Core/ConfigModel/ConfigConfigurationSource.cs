@@ -13,5 +13,8 @@ namespace Microsoft.Tye.ConfigModel
 
         [Required]
         public string Value { get; set; } = default!;
+
+        public string Source { get; set; } = default!;
+        public string SourceKind { get; set; } = default!;
     }
 }

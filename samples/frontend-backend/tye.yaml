@@ -6,3 +6,10 @@ services:
   project: backend/backend.csproj
 - name: frontend
   project: frontend/frontend.csproj
+ingress:
+  - name: ingress
+    bindings:
+      - port: 8080
+    rules:
+      - path: /
+        service: frontend

@@ -21,10 +21,16 @@ services:
 - name: postgres
   image:  postgres
   env:
+  - name: TEST_RANDOM
+    value: ${rand:guid}
   - name: POSTGRES_PASSWORD
-    value: "pass@word1"
+    value: ${secret:PostresPassword}
+  secrets:
+  - name: PostresPassword
+    source: TyeVault
+    sourceKind: KeyVault
   bindings:
   - port: 5432
-    connectionString: Server=${host};Port=${port};User Id=postgres;Password=${env:POSTGRES_PASSWORD};
+    connectionString: Server=${host};Port=${port};User Id=postgres;Password=${env:PostresPassword};
 - name: results
   project: results/results.csproj

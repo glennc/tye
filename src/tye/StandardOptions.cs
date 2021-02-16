@@ -25,7 +25,7 @@ namespace Microsoft.Tye
                     {
                         Arity = ArgumentArity.ExactlyOne,
                     },
-                    Required = false,
+                    IsRequired = false,
                 };
             }
         }
@@ -41,7 +41,7 @@ namespace Microsoft.Tye
                         Arity = ArgumentArity.OneOrMore
                     },
                     Description = "Filter the group of running services by tag.",
-                    Required = false
+                    IsRequired = false
                 };
             }
         }
@@ -56,7 +56,7 @@ namespace Microsoft.Tye
                         {
                             Arity = ArgumentArity.ExactlyOne
                         },
-                        Required = false
+                        IsRequired = false
                     };
 
         public static Option Interactive
@@ -86,9 +86,9 @@ namespace Microsoft.Tye
                     Argument = argument,
                 };
 
-                static bool TryConvert(SymbolResult symbol, out List<string> outputs)
+                static List<string> TryConvert(SymbolResult symbol)
                 {
-                    outputs = new List<string>();
+                    var outputs = new List<string>();
 
                     foreach (var token in symbol.Tokens)
                     {
@@ -96,13 +96,12 @@ namespace Microsoft.Tye
                         {
                             symbol.ErrorMessage = $"output '{token.Value}' is not recognized";
                             outputs = default!;
-                            return false;
                         }
 
                         outputs.Add(token.Value.ToLowerInvariant());
                     }
 
-                    return true;
+                    return outputs;
                 }
             }
         }
@@ -208,7 +207,7 @@ namespace Microsoft.Tye
                     {
                         Arity = ArgumentArity.ExactlyOne,
                     },
-                    Required = false,
+                    IsRequired = false,
                 };
             }
         }
@@ -220,7 +219,7 @@ namespace Microsoft.Tye
                 return new Option(new[] { "-n", "--namespace" })
                 {
                     Description = "Specify the namespace for the deployment",
-                    Required = false,
+                    IsRequired = false,
                     Argument = new Argument<string>(),
                 };
             }
@@ -233,7 +232,7 @@ namespace Microsoft.Tye
                 return new Option(new[] { "--no-default" })
                 {
                     Description = "Disable default options from environment variables",
-                    Required = false,
+                    IsRequired = false,
                     Argument = new Argument<bool>(),
                 };
             }
@@ -244,7 +243,7 @@ namespace Microsoft.Tye
             {
                 Argument = new Argument<bool>(),
                 Description = descriptions,
-                Required = false
+                IsRequired = false
             };
     }
 }

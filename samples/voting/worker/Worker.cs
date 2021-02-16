@@ -37,7 +37,7 @@ namespace Worker
                 using (var connection = new NpgsqlConnection(_configuration.GetConnectionString("postgres")))
                 using (var redisConnection = ConnectionMultiplexer.Connect(_configuration.GetConnectionString("redis")))
                 {
-                    await Task.Delay(1000);
+                    await Task.Delay(10000);
 
                     connection.Open();
                     var redis = redisConnection.GetDatabase();

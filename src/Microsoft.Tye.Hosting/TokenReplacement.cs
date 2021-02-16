@@ -6,7 +6,9 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Microsoft.AspNetCore.Server.Kestrel;
 using Microsoft.Tye.Hosting.Model;
+using Newtonsoft.Json;
 
 namespace Microsoft.Tye.Hosting
 {
@@ -87,6 +89,10 @@ namespace Microsoft.Tye.Hosting
                 binding = bindings.FirstOrDefault(b => b.Service == keys[1] && b.Name == keys[2])!;
                 return GetValueFromBinding(binding, keys[3]);
             }
+            else if (keys.Length == 2 && keys[0] == "rand")
+            {
+                return GetRandom(binding, keys[1]);
+            }
 
             return null;
 
@@ -105,6 +111,17 @@ namespace Microsoft.Tye.Hosting
             {
                 var envVar = binding.Env.FirstOrDefault(e => string.Equals(e.Name, key, StringComparison.OrdinalIgnoreCase));
                 return envVar?.Value;
+            }
+
+            static string? GetRandom(EffectiveBinding binding, string key)
+            {
+                switch (key)
+                {
+                    case "guid":
+                        return Guid.NewGuid().ToString();
+                    default:
+                        throw new Exception("Unknown random type.");
+                }
             }
         }
     }

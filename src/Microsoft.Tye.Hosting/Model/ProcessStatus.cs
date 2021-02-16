@@ -15,5 +15,14 @@ namespace Microsoft.Tye.Hosting.Model
 
         public int? ExitCode { get; set; }
         public int? Pid { get; set; }
+
+        public void Kill()
+        {
+            if (Pid.HasValue)
+            {
+                var process = System.Diagnostics.Process.GetProcessById(Pid.Value);
+                process.Kill();
+            }
+        }
     }
 }

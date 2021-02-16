@@ -4,8 +4,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.CommandLine.Invocation;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
+using System.Text.Json;
 using Microsoft.Tye.ConfigModel;
 using YamlDotNet.RepresentationModel;
 
@@ -124,6 +127,7 @@ namespace Tye.Serialization
                         HandleServiceVolumes((child.Value as YamlSequenceNode)!, service.Volumes);
                         break;
                     case "env":
+                    case "secrets":
                     case "configuration":
                         if (child.Value.NodeType != YamlNodeType.Sequence)
                         {
@@ -459,8 +463,45 @@ namespace Tye.Serialization
                     config.Value = Environment.GetEnvironmentVariable(config.Name) ?? string.Empty;
                 }
 
+                if(!string.IsNullOrEmpty(config.SourceKind))
+                {
+                    config.Value = config.SourceKind switch
+                    {
+                        "KeyVault" => GetKeyVaultSecret(config),
+                        _ => throw new Exception($"Unknown SourceKind {config.SourceKind}"),
+                    };
+                }
+
                 configuration.Add(config);
             }
+        }
+
+        private static string GetKeyVaultSecret(ConfigConfigurationSource config)
+        {
+
+            var command = $"az keyvault secret show --vault-name {config.Source} -n {config.Name}";
+            var procStartInfo = new System.Diagnostics.ProcessStartInfo("cmd", $"/c {command}")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            var proc = new System.Diagnostics.Process
+            {
+                StartInfo = procStartInfo
+            };
+            proc.Start();
+            proc.WaitForExit();
+            var result = proc.StandardOutput.ReadToEnd();
+
+            if(proc.ExitCode != 0)
+            {
+                throw new Exception($"Unable to retrieve secret from KeyVault, CLI returned non-zero error code when executing {command}");
+            }
+
+            var secretValue = JsonSerializer.Deserialize<KeyVaultCliOutput>(result);
+            return secretValue.value;
         }
 
         private static void HandleServiceConfigurationNameMapping(YamlMappingNode yamlMappingNode, ConfigConfigurationSource config)
@@ -476,6 +517,12 @@ namespace Tye.Serialization
                         break;
                     case "value":
                         config.Value = YamlParser.GetScalarValue(key, child.Value);
+                        break;
+                    case "source":
+                        config.Source = YamlParser.GetScalarValue(key, child.Value);
+                        break;
+                    case "sourceKind":
+                        config.SourceKind = YamlParser.GetScalarValue(key, child.Value);
                         break;
                     default:
                         throw new TyeYamlException(child.Key.Start, CoreStrings.FormatUnrecognizedKey(key));
